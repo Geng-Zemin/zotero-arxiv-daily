@@ -19,27 +19,27 @@ class ArxivPaper:
     def __init__(self,paper:arxiv.Result):
         self._paper = paper
         self.score = None
-    
+
     @property
     def title(self) -> str:
         return self._paper.title
-    
+
     @property
     def summary(self) -> str:
         return self._paper.summary
-    
+
     @property
     def authors(self) -> list[str]:
         return self._paper.authors
-    
+
     @cached_property
     def arxiv_id(self) -> str:
         return re.sub(r'v\d+$', '', self._paper.get_short_id())
-    
+
     @property
     def pdf_url(self) -> str:
         return self._paper.pdf_url
-    
+
     @cached_property
     def code_url(self) -> Optional[str]:
         s = requests.Session()
@@ -63,19 +63,19 @@ class ArxivPaper:
         if repo_list.get('count',0) == 0:
             return None
         return repo_list['results'][0]['url']
-    
+
     @cached_property
     def tex(self) -> dict[str,str]:
         with ExitStack() as stack:
             tmpdirname = stack.enter_context(TemporaryDirectory())
             # file = self._paper.download_source(dirpath=tmpdirname)
-            try:
 
             if not self._paper.pdf_url:
                 logger.warning(f"Paper {self._paper.title} ({self.arxiv_id}) has no PDF URL, skipping source download.")
                 return None
 
- # 尝试下载源文件
+            try:
+                # 尝试下载源文件
                 file = self._paper.download_source(dirpath=tmpdirname)
             except HTTPError as e:
                 # 捕获 HTTP 错误
@@ -86,18 +86,18 @@ class ArxivPaper:
                 else:
                     # 如果是其他 HTTP 错误 (如 503)，这可能是临时性问题，值得记录下来
                     logger.error(f"HTTP Error {e.code} when downloading source for {self.arxiv_id}: {e.reason}")
-                    raise # 重新抛出异常，因为这可能是个需要关注的严重问题
+                    return None # 重新抛出异常，因为这可能是个需要关注的严重问题
             try:
                 tar = stack.enter_context(tarfile.open(file))
             except tarfile.ReadError:
                 logger.debug(f"Failed to find main tex file of {self.arxiv_id}: Not a tar file.")
                 return None
- 
+
             tex_files = [f for f in tar.getnames() if f.endswith('.tex')]
             if len(tex_files) == 0:
                 logger.debug(f"Failed to find main tex file of {self.arxiv_id}: No tex file.")
                 return None
-            
+
             bbl_file = [f for f in tar.getnames() if f.endswith('.bbl')]
             match len(bbl_file) :
                 case 0:
@@ -135,7 +135,7 @@ class ArxivPaper:
                     main_tex = t
                     logger.debug(f"Choose {t} as main tex file of {self.arxiv_id}")
                 file_contents[t] = content
-            
+
             if main_tex is not None:
                 main_source:str = file_contents[main_tex]
                 #find and replace all included sub-files
@@ -151,7 +151,7 @@ class ArxivPaper:
                 logger.debug(f"Failed to find main tex file of {self.arxiv_id}: No tex file containing the document block.")
                 file_contents["all"] = None
         return file_contents
-    
+
     @cached_property
     def tldr(self) -> str:
         introduction = ""
@@ -193,7 +193,7 @@ class ArxivPaper:
         prompt_tokens = enc.encode(prompt)
         prompt_tokens = prompt_tokens[:4000]  # truncate to 4000 tokens
         prompt = enc.decode(prompt_tokens)
-        
+
         tldr = llm.generate(
             messages=[
                 {
