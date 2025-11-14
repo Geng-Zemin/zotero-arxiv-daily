@@ -70,7 +70,13 @@ class ArxivPaper:
             tmpdirname = stack.enter_context(TemporaryDirectory())
             # file = self._paper.download_source(dirpath=tmpdirname)
             try:
-                # 尝试下载源文件
+               
+if not self._paper.pdf_url:
+    return None  # 或记录日志后跳过
+file = self._paper.download_source(dirpath=tmpdirname)
+
+
+ # 尝试下载源文件
                 file = self._paper.download_source(dirpath=tmpdirname)
             except HTTPError as e:
                 # 捕获 HTTP 错误
