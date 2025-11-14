@@ -71,6 +71,10 @@ class ArxivPaper:
             # file = self._paper.download_source(dirpath=tmpdirname)
             try:
 
+            if not self._paper.pdf_url:
+                logger.warning(f"Paper {self._paper.title} ({self.arxiv_id}) has no PDF URL, skipping source download.")
+                return None
+
  # 尝试下载源文件
                 file = self._paper.download_source(dirpath=tmpdirname)
             except HTTPError as e:
